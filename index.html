@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Display</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center; /* Center horizontally */
+            align-items: center;     /* Center vertically */
+            min-height: 100vh;       /* Take up full viewport height */
+            margin: 0;
+            overflow: hidden;        /* Hide scrollbars for full-screen effect */
+            background-color: #f0f0f0; /* Light background for contrast */
+        }
+        .image-container {
+            display: none; /* Hide all images by default */
+            max-width: 90%;
+            max-height: 90vh;
+            text-align: center;
+        }
+        .image-container.active {
+            display: block; /* Show the active image */
+        }
+        img {
+            max-width: 100%; /* Make images fit within their container */
+            max-height: 80vh;
+            height: auto; /* Maintain aspect ratio */
+            display: block; /* Remove extra space below image */
+            margin: auto; /* Center image within its container */
+        }
+        /* Style for the email input and button */
+        .email-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex; /* Use flexbox for alignment */
+            gap: 10px; /* Space between input and button */
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent background */
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .email-container input[type="email"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .email-container button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .email-container button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="image-container active">
+        <img src="360_F_273162497_ShAAB1TH0vhM4UUWbhBuao8jtGBDubwD.jpg" alt="Image 1">
+    </div>
+    <div class="image-container">
+        <img src="istockphoto-1041987488-612x612.jpg" alt="Image 2">
+    </div>
+    <div class="image-container">
+        <img src="images.jpg" alt="Image 3">
+    </div>
+    <div class="email-container">
+        <input type="email" id="email" placeholder="Enter your email">
+        <button onclick="sendEmail()">Send File</button>
+    </div>
+
+    <script>
+        let currentImageIndex = 0;
+        const imageContainers = document.querySelectorAll('.image-container');
+
+        function showImage(index) {
+            imageContainers.forEach((container, i) => {
+                if (i === index) {
+                    container.classList.add('active');
+                } else {
+                    container.classList.remove('active');
+                }
+            });
+        }
+
+        // Function to handle swiping (basic version)
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+        });
+
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].clientX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const minSwipeDistance = 50; // Minimum pixels to count as a swipe
+
+            if (touchEndX < touchStartX - minSwipeDistance) {
+                // Swiped left (next image)
+                currentImageIndex = (currentImageIndex + 1) % imageContainers.length;
+            } else if (touchEndX > touchStartX + minSwipeDistance) {
+                // Swiped right (previous image)
+                currentImageIndex = (currentImageIndex - 1 + imageContainers.length) % imageContainers.length;
+            }
+            showImage(currentImageIndex);
+        }
+
+        // Placeholder for sending email - We'll build this out later
+        function sendEmail() {
+            const email = document.getElementById('email').value;
+            if (email) {
+                alert(`Simulating sending file to: ${email}`);
+                // In a real application, you'd send this email to a server
+                // to handle the file attachment and sending.
+                document.getElementById('email').value = ''; // Clear the input
+            } else {
+                alert('Please enter your email address.');
+            }
+        }
+
+        // Initialize with the first image
+        showImage(currentImageIndex);
+    </script>
+</body>
+</html>
