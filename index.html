@@ -88,116 +88,112 @@
         <button onclick="sendEmail()">Send File</button>
     </div>
 
-    <script>
-        let currentImageIndex = 0;
-        const imageContainers = document.querySelectorAll('.image-container');
+   <script>
+    let currentImageIndex = 0;
+    const imageContainers = document.querySelectorAll('.image-container');
 
-        // Added for better mobile experience
-        const body = document.body;
-        // Prevent default touch actions like pull-to-refresh or scrolling
-        body.addEventListener('touchmove', function(event) {
-            event.preventDefault();
-        }, { passive: false });
+    const body = document.body;
+    body.addEventListener('touchmove', function(event) {
+        event.preventDefault();
+    }, { passive: false });
 
+    function showImage(index) {
+        imageContainers.forEach((container, i) => {
+            if (i === index) {
+                container.classList.add('active');
+            } else {
+                container.classList.remove('active');
+            }
+        });
+    }
 
-        function showImage(index) {
-            imageContainers.forEach((container, i) => {
-                if (i === index) {
-                    container.classList.add('active');
-                } else {
-                    container.classList.remove('active');
-                }
-            });
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    document.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) {
+            touchStartX = e.touches[0].clientX;
         }
+    }, { passive: true });
 
-        // --- Swiping Logic ---
-        let touchStartX = 0;
-        let touchEndX = 0;
-
-        document.addEventListener('touchstart', e => {
-            // Only consider single touch
-            if (e.touches.length === 1) {
-                touchStartX = e.touches[0].clientX;
-            }
-        }, { passive: true }); // Use passive to avoid blocking scroll (though we prevent default later)
-
-        document.addEventListener('touchend', e => {
-            // Only consider single touch end
-            if (e.changedTouches.length === 1) {
-                touchEndX = e.changedTouches[0].clientX;
-                handleSwipe();
-            }
-        }, { passive: true });
-
-        function handleSwipe() {
-            const minSwipeDistance = 50; // Minimum pixels to count as a swipe
-
-            if (touchEndX < touchStartX - minSwipeDistance) {
-                // Swiped left (next image)
-                currentImageIndex = (currentImageIndex + 1) % imageContainers.length;
-            } else if (touchEndX > touchStartX + minSwipeDistance) {
-                // Swiped right (previous image)
-                currentImageIndex = (currentImageIndex - 1 + imageContainers.length) % imageContainers.length;
-            }
-            showImage(currentImageIndex);
+    document.addEventListener('touchend', e => {
+        if (e.changedTouches.length === 1) {
+            touchEndX = e.changedTouches[0].clientX;
+            handleSwipe();
         }
-        // --- END Swiping Logic ---
+    }, { passive: true });
 
-        // --- UPDATED sendEmail() FUNCTION ---
-        async function sendEmail() {
-            const recipientEmail = document.getElementById('email').value.trim(); // .trim() removes whitespace
-
-            if (!recipientEmail) {
-                alert('Please enter your email address.');
-                return;
-            }
-
-            // More robust email format validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(recipientEmail)) {
-                alert('Please enter a valid email address (e.g., example@domain.com).');
-                return;
-            }
-
-            // Provide immediate feedback to the user
-            const sendButton = document.querySelector('.email-container button');
-            const originalButtonText = sendButton.textContent;
-            sendButton.textContent = 'Sending...';
-            sendButton.disabled = true;
-
-            try {
-                // Make a POST request to your Vercel serverless function
-                const response = await fetch('/api/send-email', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ recipientEmail: recipientEmail }),
-                });
-
-                const data = await response.json(); // Parse the JSON response from your serverless function
-
-                if (response.ok) { // Check if the HTTP status code is 2xx
-                    alert('Success! Your file has been sent to ' + recipientEmail + '.');
-                    document.getElementById('email').value = ''; // Clear the input
-                } else {
-                    // Display error message from the serverless function
-                    alert('Failed to send email: ' + (data.message || 'Unknown error.'));
-                    console.error('Serverless function error:', data); // Log full error response for debugging
-                }
-            } catch (error) {
-                console.error('Network or unexpected error:', error);
-                alert('An error occurred. Please try again later.');
-            } finally {
-                // Reset button state
-                sendButton.textContent = originalButtonText;
-                sendButton.disabled = false;
-            }
+    function handleSwipe() {
+        const minSwipeDistance = 50;
+        if (touchEndX < touchStartX - minSwipeDistance) {
+            currentImageIndex = (currentImageIndex + 1) % imageContainers.length;
+        } else if (touchEndX > touchStartX + minSwipeDistance) {
+            currentImageIndex = (currentImageIndex - 1 + imageContainers.length) % imageContainers.length;
         }
-        // --- END UPDATED sendEmail() FUNCTION ---
-
-        // Initialize with the first image
         showImage(currentImageIndex);
-    </script>
+    }
+
+    // --- UPDATED sendEmail() FUNCTION TO PASS CURRENT IMAGE ---
+    async function sendEmail() {
+        const recipientEmail = document.getElementById('email').value.trim();
+
+        if (!recipientEmail) {
+            alert('Please enter your email address.');
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(recipientEmail)) {
+            alert('Please enter a valid email address (e.g., example@domain.com).');
+            return;
+        }
+
+        // Get the currently displayed image's filename
+        const currentImageElement = imageContainers[currentImageIndex].querySelector('img');
+        const currentImageSrc = currentImageElement ? currentImageElement.getAttribute('src') : null;
+
+        if (!currentImageSrc) {
+            alert('Could not determine current image to send.');
+            return;
+        }
+
+        const sendButton = document.querySelector('.email-container button');
+        const originalButtonText = sendButton.textContent;
+        sendButton.textContent = 'Sending...';
+        sendButton.disabled = true;
+
+        try {
+            const response = await fetch('/api/send-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    recipientEmail: recipientEmail,
+                    imageFilename: currentImageSrc // Pass the filename to the serverless function
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('Success! Your image has been sent to ' + recipientEmail + '.');
+                document.getElementById('email').value = '';
+            } else {
+                alert('Failed to send image: ' + (data.message || 'Unknown error.'));
+                console.error('Serverless function error:', data);
+            }
+        } catch (error) {
+            console.error('Network or unexpected error:', error);
+            alert('An error occurred. Please try again later.');
+        } finally {
+            sendButton.textContent = originalButtonText;
+            sendButton.disabled = false;
+        }
+    }
+    // --- END UPDATED sendEmail() FUNCTION ---
+
+    showImage(currentImageIndex);
+</script>
 </body>
 </html>

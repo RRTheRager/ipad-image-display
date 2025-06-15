@@ -1,52 +1,77 @@
 import { Resend } from 'resend';
 
-// This is the Vercel Serverless Function handler
 export default async function handler(req, res) {
-    // Only allow POST requests
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
-    // Get the email address from the request body
-    const { recipientEmail } = req.body;
+    const { recipientEmail, imageFilename } = req.body; // Now receiving imageFilename
 
-    // Basic validation
     if (!recipientEmail || !recipientEmail.includes('@')) {
-        return res.status(400).json({ message: 'Invalid email address provided.' });
+        return res.status(400).json({ message: 'Invalid recipient email address.' });
+    }
+    if (!imageFilename) {
+        return res.status(400).json({ message: 'No image filename provided.' });
     }
 
-    // Initialize Resend with your API Key
-    // The API key is securely accessed from Vercel Environment Variables
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // Define the sender email address (MUST be a verified domain in Resend!)
-    // REPLACE THIS with an actual email address from your *verified domain*.
-    // E.g., if your domain is 'myphotos.com', use 'info@myphotos.com'
-    const SENDER_EMAIL = 'noreply@myipadphotos.com'; // <--- IMPORTANT: YOU MUST REPLACE THIS!
-    
-    // This is YOUR Vercel address where the images are hosted
-    const IMAGE_LINK = 'ipad-image-display.vercel.app'; // <--- THIS HAS BEEN UPDATED WITH YOUR URL
+    const SENDER_EMAIL = 'noreply@myipadphotos.com'; // <--- IMPORTANT: REPLACE THIS with your actual verified email
+    const BASE_URL = 'https://ipad-image-display.vercel.app'; // Your Vercel domain
 
     try {
+        // Construct the full URL to the image
+        const imageUrl = `<span class="math-inline">\{BASE\_URL\}/</span>{imageFilename}`;
+
+        // Fetch the image data
+        const imageResponse = await fetch(imageUrl);
+
+        if (!imageResponse.ok) {
+            throw new Error(`Failed to fetch image from ${imageUrl}: ${imageResponse.statusText}`);
+        }
+
+        // Get the image data as an ArrayBuffer
+        const imageBuffer = await imageResponse.arrayBuffer();
+
+        // Convert ArrayBuffer to Node.js Buffer and then to Base64
+        const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+
+        // Determine content type (simple guess from filename for common types)
+        let contentType = 'application/octet-stream';
+        if (imageFilename.endsWith('.jpg') || imageFilename.endsWith('.jpeg')) {
+            contentType = 'image/jpeg';
+        } else if (imageFilename.endsWith('.png')) {
+            contentType = 'image/png';
+        } else if (imageFilename.endsWith('.gif')) {
+            contentType = 'image/gif';
+        }
+
         const data = await resend.emails.send({
-            from: `Your Display Gallery <${SENDER_EMAIL}>`, // Display name <sender_email>
+            from: `Your Display Gallery <${SENDER_EMAIL}>`,
             to: [recipientEmail],
-            subject: 'Your Requested Image Files',
+            subject: 'Your Requested Image',
             html: `
                 <p>Hello!</p>
-                <p>Thank you for your interest. You requested the image files from our display iPad.</p>
-                <p>You can view and download the images here: <a href="${IMAGE_LINK}" target="_blank">${IMAGE_LINK}</a></p>
+                <p>Thank you for your interest. Here is the image you requested from our display iPad.</p>
+                <p>You can also view the full gallery here: <a href="<span class="math-inline">\{BASE\_URL\}" target\="\_blank"\></span>{BASE_URL}</a></p>
                 <p>Enjoy!</p>
                 <p>Best regards,</p>
                 <p>Your Display Gallery</p>
             `,
+            attachments: [
+                {
+                    filename: imageFilename, // The original filename
+                    content: imageBase64,    // The Base64 encoded image data
+                    contentType: contentType // The MIME type of the image
+                },
+            ],
         });
 
-        console.log('Email sent successfully:', data); // Log for debugging on Vercel
-        res.status(200).json({ message: 'Email sent successfully!', data });
+        console.log('Email with attachment sent successfully:', data);
+        res.status(200).json({ message: 'Image sent successfully!', data });
 
     } catch (error) {
-        console.error('Error sending email:', error); // Log for debugging on Vercel
-        res.status(500).json({ message: 'Failed to send email.', error: error.message });
+        console.error('Error sending email with attachment:', error);
+        res.status(500).json({ message: 'Failed to send image.', error: error.message });
     }
 }
