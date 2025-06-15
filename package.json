@@ -2,7 +2,7 @@
   "name": "ipad-display-app",
   "version": "1.0.0",
   "description": "iPad display app for image swiping and email sending",
-  "type": "module",  <-- ADD THIS LINE IF MISSING
+  "type": "module",
   "main": "api/send-email.js",
   "scripts": {
     "start": "vercel dev"
