@@ -18,8 +18,8 @@ export default async function handler(req, res) {
 
     // Replace 'Your Name' and 'info@yourdomain.com' with your desired name and email address from your verified domain.
     const SENDER_NAME = 'Your Display Gallery'; // Replace with the name you want
-    const SENDER_EMAIL = 'info@YOUR_VERIFIED_DOMAIN.com'; // <--- IMPORTANT: YOU MUST REPLACE THIS!
-    const BASE_URL = 'https://ipad-image-display-c5cv0ir11-kadens-projects-60eab1e9.vercel.app'; // Your Vercel domain
+    const SENDER_EMAIL = 'noreply@myipadphotos.com'; // <--- IMPORTANT: YOU MUST REPLACE THIS!
+    const BASE_URL = 'https://ipad-image-display.vercel.app'; // Your Vercel domain
 
     try {
         const imageUrl = `${BASE_URL}/${imageFilename}`;
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         }
 
         const data = await resend.emails.send({
-            from: `${Bulletin iPad} <${SENDER_EMAIL}>`, //  <---  Updated from field to include both name and email
+            from: `${Bulletin_iPad} <${SENDER_EMAIL}>`, //  <---  Updated from field to include both name and email
             to: [recipientEmail],
             subject: 'Your Requested Image',
             html: `<p>&nbsp;</p>`, // Minimal body
