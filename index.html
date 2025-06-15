@@ -45,6 +45,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.15); /* More prominent shadow */
             backdrop-filter: blur(5px); /* Frosty glass effect */
             -webkit-backdrop-filter: blur(5px); /* For Safari */
+            z-index: 100; /* Ensure it's above images */
         }
         .email-container input[type="email"] {
             padding: 10px;
@@ -74,126 +75,177 @@
     </style>
 </head>
 <body>
-    <div class="image-container active">
-        <img src="istockphoto-1041987488-612x612.jpg" alt="Image 1">
-    </div>
-    <div class="image-container">
-        <img src="images.jpg" alt="Image 2">
-    </div>
-    <div class="image-container">
-        <img src="360_F_273162497_ShAAB1TH0vhM4UUWbhBuao8jtGBDubwD.jpg" alt="Image 3">
-    </div>
     <div class="email-container">
         <input type="email" id="email" placeholder="Enter your email">
         <button onclick="sendEmail()">Send File</button>
     </div>
 
-   <script>
-    let currentImageIndex = 0;
-    const imageContainers = document.querySelectorAll('.image-container');
+    <script>
+        let currentImageIndex = 0;
+        let imageFilenames = []; // This will store the list of image filenames
+        let imageContainers = []; // This will store the dynamically created image container elements
 
-    const body = document.body;
-    body.addEventListener('touchmove', function(event) {
-        event.preventDefault();
-    }, { passive: false });
+        const body = document.body;
+        body.addEventListener('touchmove', function(event) {
+            event.preventDefault();
+        }, { passive: false });
 
-    function showImage(index) {
-        imageContainers.forEach((container, i) => {
-            if (i === index) {
-                container.classList.add('active');
-            } else {
-                container.classList.remove('active');
+
+        // --- New function to dynamically load images ---
+        async function loadImages() {
+            try {
+                const response = await fetch('/api/list-images');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const filenames = await response.json();
+                imageFilenames = filenames; // Store the filenames
+
+                const mainContentArea = document.body; // Or a specific div if you had one for images
+
+                // Clear existing image containers if any (important for re-loading)
+                document.querySelectorAll('.image-container').forEach(el => el.remove());
+                imageContainers = []; // Reset the array
+
+                // Create image containers for each filename
+                filenames.forEach((filename, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'image-container';
+
+                    const img = document.createElement('img');
+                    img.src = `/public/images/${filename}`; // Path to your images on Vercel
+                    img.alt = `Image ${index + 1}`; // Simple alt text
+
+                    div.appendChild(img);
+                    mainContentArea.insertBefore(div, document.querySelector('.email-container')); // Insert before email container
+
+                    imageContainers.push(div); // Add to our array for swiping
+                });
+
+                // Initialize with the first image if there are any
+                if (imageContainers.length > 0) {
+                    showImage(currentImageIndex);
+                } else {
+                    console.warn("No images found to display.");
+                    alert("No images found to display. Please upload images to public/images folder.");
+                }
+
+            } catch (error) {
+                console.error('Error loading images:', error);
+                alert('Failed to load images. Please try again later.');
             }
-        });
-    }
-
-    let touchStartX = 0;
-    let touchEndX = 0;
-
-    document.addEventListener('touchstart', e => {
-        if (e.touches.length === 1) {
-            touchStartX = e.touches[0].clientX;
         }
-    }, { passive: true });
+        // --- End New function ---
 
-    document.addEventListener('touchend', e => {
-        if (e.changedTouches.length === 1) {
-            touchEndX = e.changedTouches[0].clientX;
-            handleSwipe();
-        }
-    }, { passive: true });
 
-    function handleSwipe() {
-        const minSwipeDistance = 50;
-        if (touchEndX < touchStartX - minSwipeDistance) {
-            currentImageIndex = (currentImageIndex + 1) % imageContainers.length;
-        } else if (touchEndX > touchStartX + minSwipeDistance) {
-            currentImageIndex = (currentImageIndex - 1 + imageContainers.length) % imageContainers.length;
-        }
-        showImage(currentImageIndex);
-    }
+        function showImage(index) {
+            // Ensure index is within bounds
+            if (index < 0) index = imageContainers.length - 1;
+            if (index >= imageContainers.length) index = 0;
 
-    // --- UPDATED sendEmail() FUNCTION TO PASS CURRENT IMAGE ---
-    async function sendEmail() {
-        const recipientEmail = document.getElementById('email').value.trim();
-
-        if (!recipientEmail) {
-            alert('Please enter your email address.');
-            return;
-        }
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(recipientEmail)) {
-            alert('Please enter a valid email address (e.g., example@domain.com).');
-            return;
-        }
-
-        // Get the currently displayed image's filename
-        const currentImageElement = imageContainers[currentImageIndex].querySelector('img');
-        const currentImageSrc = currentImageElement ? currentImageElement.getAttribute('src') : null;
-
-        if (!currentImageSrc) {
-            alert('Could not determine current image to send.');
-            return;
-        }
-
-        const sendButton = document.querySelector('.email-container button');
-        const originalButtonText = sendButton.textContent;
-        sendButton.textContent = 'Sending...';
-        sendButton.disabled = true;
-
-        try {
-            const response = await fetch('/api/send-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    recipientEmail: recipientEmail,
-                    imageFilename: currentImageSrc // Pass the filename to the serverless function
-                }),
+            imageContainers.forEach((container, i) => {
+                if (i === index) {
+                    container.classList.add('active');
+                } else {
+                    container.classList.remove('active');
+                }
             });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                alert('Success! Your image has been sent to ' + recipientEmail + '.');
-                document.getElementById('email').value = '';
-            } else {
-                alert('Failed to send image: ' + (data.message || 'Unknown error.'));
-                console.error('Serverless function error:', data);
-            }
-        } catch (error) {
-            console.error('Network or unexpected error:', error);
-            alert('An error occurred. Please try again later.');
-        } finally {
-            sendButton.textContent = originalButtonText;
-            sendButton.disabled = false;
+            currentImageIndex = index; // Update current index
         }
-    }
-    // --- END UPDATED sendEmail() FUNCTION ---
 
-    showImage(currentImageIndex);
-</script>
+        // --- Swiping Logic (remains mostly the same, now operating on dynamic elements) ---
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            if (e.changedTouches.length === 1) {
+                touchEndX = e.changedTouches[0].clientX;
+                handleSwipe();
+            }
+        }, { passive: true });
+
+        function handleSwipe() {
+            if (imageContainers.length <= 1) return; // No need to swipe if 0 or 1 image
+
+            const minSwipeDistance = 50;
+            if (touchEndX < touchStartX - minSwipeDistance) {
+                // Swiped left (next image)
+                currentImageIndex = (currentImageIndex + 1) % imageContainers.length;
+            } else if (touchEndX > touchStartX + minSwipeDistance) {
+                // Swiped right (previous image)
+                currentImageIndex = (currentImageIndex - 1 + imageContainers.length) % imageContainers.length;
+            }
+            showImage(currentImageIndex);
+        }
+        // --- END Swiping Logic ---
+
+        // --- sendEmail() Function (slightly updated to pass dynamic filename) ---
+        async function sendEmail() {
+            const recipientEmail = document.getElementById('email').value.trim();
+
+            if (!recipientEmail) {
+                alert('Please enter your email address.');
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(recipientEmail)) {
+                alert('Please enter a valid email address (e.g., example@domain.com).');
+                return;
+            }
+
+            // Get the currently displayed image's filename from our loaded list
+            const currentImageFilename = imageFilenames[currentImageIndex];
+
+            if (!currentImageFilename) {
+                alert('Could not determine current image to send. No images loaded or selected.');
+                return;
+            }
+
+            const sendButton = document.querySelector('.email-container button');
+            const originalButtonText = sendButton.textContent;
+            sendButton.textContent = 'Sending...';
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        recipientEmail: recipientEmail,
+                        imageFilename: currentImageFilename // Pass the filename to the serverless function
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Success! Your image has been sent to ' + recipientEmail + '.');
+                    document.getElementById('email').value = '';
+                } else {
+                    alert('Failed to send image: ' + (data.message || 'Unknown error.'));
+                    console.error('Serverless function error:', data);
+                }
+            } catch (error) {
+                console.error('Network or unexpected error:', error);
+                alert('An error occurred. Please try again later.');
+            } finally {
+                sendButton.textContent = originalButtonText;
+                sendButton.disabled = false;
+            }
+        }
+        // --- END sendEmail() Function ---
+
+        // Load images when the page first loads
+        loadImages();
+    </script>
 </body>
 </html>
