@@ -50,14 +50,9 @@ export default async function handler(req, res) {
             from: `Your Display Gallery <${SENDER_EMAIL}>`,
             to: [recipientEmail],
             subject: 'Your Requested Image',
-            html: `
-                <p>Hello!</p>
-                <p>Thank you for your interest. Here is the image you requested from our display iPad.</p>
-                <p>You can also view the full gallery here: <a href="<span class="math-inline">\{BASE\_URL\}" target\="\_blank"\></span>{BASE_URL}</a></p>
-                <p>Enjoy!</p>
-                <p>Best regards,</p>
-                <p>Your Display Gallery</p>
-            `,
+            html: `<p>&nbsp;</p>`, // This is an HTML non-breaking space, which ensures the body isn't truly empty and gets rendered.
+                       // Alternatively, you could just use `html: ''` for a completely empty body,
+                       // but some email clients might ignore it or add default text.
             attachments: [
                 {
                     filename: imageFilename, // The original filename
