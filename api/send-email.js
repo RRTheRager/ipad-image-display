@@ -5,7 +5,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
-    const { recipientEmail, imageFilename } = req.body;
+    const { recipientEmail, imageFilename } = req.body; // Now receiving imageFilename
 
     if (!recipientEmail || !recipientEmail.includes('@')) {
         return res.status(400).json({ message: 'Invalid recipient email address.' });
@@ -16,23 +16,27 @@ export default async function handler(req, res) {
 
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // Replace 'Your Name' and 'info@yourdomain.com' with your desired name and email address from your verified domain.
-    const SENDER_NAME = 'Your Display Gallery'; // Replace with the name you want
-    const SENDER_EMAIL = 'noreply@myipadphotos.com'; // <--- IMPORTANT: YOU MUST REPLACE THIS!
+    const SENDER_EMAIL = 'noreply@myipadphotos.com'; // <--- IMPORTANT: REPLACE THIS with your actual verified email
     const BASE_URL = 'https://ipad-image-display.vercel.app'; // Your Vercel domain
 
     try {
+        // Construct the full URL to the image
         const imageUrl = `${BASE_URL}/${imageFilename}`;
 
+        // Fetch the image data
         const imageResponse = await fetch(imageUrl);
 
         if (!imageResponse.ok) {
             throw new Error(`Failed to fetch image from ${imageUrl}: ${imageResponse.statusText}`);
         }
 
+        // Get the image data as an ArrayBuffer
         const imageBuffer = await imageResponse.arrayBuffer();
+
+        // Convert ArrayBuffer to Node.js Buffer and then to Base64
         const imageBase64 = Buffer.from(imageBuffer).toString('base64');
 
+        // Determine content type (simple guess from filename for common types)
         let contentType = 'application/octet-stream';
         if (imageFilename.endsWith('.jpg') || imageFilename.endsWith('.jpeg')) {
             contentType = 'image/jpeg';
@@ -43,15 +47,17 @@ export default async function handler(req, res) {
         }
 
         const data = await resend.emails.send({
-            from: `${Bulletin_iPad} <${SENDER_EMAIL}>`, //  <---  Updated from field to include both name and email
+            from: `Your Display Gallery <${SENDER_EMAIL}>`,
             to: [recipientEmail],
             subject: 'Your Requested Image',
-            html: `<p>&nbsp;</p>`, // Minimal body
+            html: `<p>&nbsp;</p>`, // This is an HTML non-breaking space, which ensures the body isn't truly empty and gets rendered.
+                       // Alternatively, you could just use `html: ''` for a completely empty body,
+                       // but some email clients might ignore it or add default text.
             attachments: [
                 {
-                    filename: imageFilename,
-                    content: imageBase64,
-                    contentType: contentType
+                    filename: imageFilename, // The original filename
+                    content: imageBase64,    // The Base64 encoded image data
+                    contentType: contentType // The MIME type of the image
                 },
             ],
         });
