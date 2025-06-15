@@ -13,6 +13,7 @@
             overflow: hidden;        /* Hide scrollbars for full-screen effect */
             background-color: #f0f0f0; /* Light background for contrast */
             font-family: Arial, sans-serif; /* A clean font */
+            cursor: pointer; /* Indicate it's clickable */
         }
         .image-container {
             display: none; /* Hide all images by default */
@@ -76,13 +77,13 @@
 </head>
 <body>
     <div class="image-container active">
-        <img src="page01.jpg" alt="Image 1">
+        <img src="public/images/image1.jpg" alt="Image 1">
     </div>
     <div class="image-container">
-        <img src="page02copy.jpg" alt="Image 2">
+        <img src="public/images/image2.png" alt="Image 2">
     </div>
     <div class="image-container">
-        <img src="page02.jpg" alt="Image 3">
+        <img src="public/images/image3.jpeg" alt="Image 3">
     </div>
     <div class="email-container">
         <input type="email" id="email" placeholder="Enter your email">
@@ -94,6 +95,7 @@
         const imageContainers = document.querySelectorAll('.image-container'); // Selects the hardcoded divs
 
         const body = document.body;
+        // Keep preventing default touch actions if you want to avoid scroll/pull-to-refresh
         body.addEventListener('touchmove', function(event) {
             event.preventDefault();
         }, { passive: false });
@@ -116,39 +118,25 @@
             currentImageIndex = index; // Update current index
         }
 
-        // --- Swiping Logic (remains mostly the same, operates on selected elements) ---
-        let touchStartX = 0;
-        let touchEndX = 0;
-
-        document.addEventListener('touchstart', e => {
-            if (e.touches.length === 1) {
-                touchStartX = e.touches[0].clientX;
+        // --- TAP NAVIGATION LOGIC ---
+        document.addEventListener('click', e => {
+            // Check if the click target is inside the email-container
+            const emailContainer = document.querySelector('.email-container');
+            if (emailContainer.contains(e.target)) {
+                // If it's part of the email form/button, do nothing (don't change image)
+                return;
             }
-        }, { passive: true });
 
-        document.addEventListener('touchend', e => {
-            if (e.changedTouches.length === 1) {
-                touchEndX = e.changedTouches[0].clientX;
-                handleSwipe();
-            }
-        }, { passive: true });
-
-        function handleSwipe() {
-            if (imageContainers.length <= 1) return; // No need to swipe if 0 or 1 image
-
-            const minSwipeDistance = 50;
-            if (touchEndX < touchStartX - minSwipeDistance) {
-                // Swiped left (next image)
+            // If there's more than one image, advance to the next
+            if (imageContainers.length > 1) {
                 currentImageIndex = (currentImageIndex + 1) % imageContainers.length;
-            } else if (touchEndX > touchStartX + minSwipeDistance) {
-                // Swiped right (previous image)
-                currentImageIndex = (currentImageIndex - 1 + imageContainers.length) % imageContainers.length;
+                showImage(currentImageIndex);
             }
-            showImage(currentImageIndex);
-        }
-        // --- END Swiping Logic ---
+        });
+        // --- END TAP NAVIGATION LOGIC ---
 
-        // --- sendEmail() Function (now gets src directly from active image) ---
+
+        // --- sendEmail() Function (unchanged from last working version) ---
         async function sendEmail() {
             const recipientEmail = document.getElementById('email').value.trim();
 
@@ -163,7 +151,6 @@
                 return;
             }
 
-            // Get the currently displayed image's full src attribute
             const currentImageElement = imageContainers[currentImageIndex].querySelector('img');
             const currentImageSrc = currentImageElement ? currentImageElement.getAttribute('src') : null;
 
@@ -172,7 +159,6 @@
                 return;
             }
 
-            // The imageFilename sent to backend will now be like "public/images/image1.jpg"
             const imageFilename = currentImageSrc; 
 
             const sendButton = document.querySelector('.email-container button');
@@ -188,7 +174,7 @@
                     },
                     body: JSON.stringify({
                         recipientEmail: recipientEmail,
-                        imageFilename: imageFilename // Pass the full path from src to the serverless function
+                        imageFilename: imageFilename
                     }),
                 });
 
