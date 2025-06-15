@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     // Replace 'noreply@yourdomain.com' with an actual email address from your *verified domain*.
     // E.g., if your domain is 'myphotos.com', use 'info@myphotos.com'
     const SENDER_EMAIL = 'noreply@myipadphotos.com'; // <--- IMPORTANT: REPLACE THIS!
-    const IMAGE_LINK = 'https://ipad-image-display.vercel.app/'; // <--- IMPORTANT: REPLACE THIS with your actual Vercel URL
+    const IMAGE_LINK = 'ipad-image-display-bwhsvy3yh-kadens-projects-60eab1e9.vercel.app'; // <--- IMPORTANT: REPLACE THIS with your actual Vercel URL
 
     try {
         const data = await resend.emails.send({
