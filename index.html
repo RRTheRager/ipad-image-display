@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Image Display</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body {
             display: flex;
@@ -11,6 +12,7 @@
             margin: 0;
             overflow: hidden;        /* Hide scrollbars for full-screen effect */
             background-color: #f0f0f0; /* Light background for contrast */
+            font-family: Arial, sans-serif; /* A clean font */
         }
         .image-container {
             display: none; /* Hide all images by default */
@@ -27,6 +29,8 @@
             height: auto; /* Maintain aspect ratio */
             display: block; /* Remove extra space below image */
             margin: auto; /* Center image within its container */
+            border-radius: 8px; /* Slightly rounded corners for images */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); /* Subtle shadow */
         }
         /* Style for the email input and button */
         .email-container {
@@ -36,39 +40,48 @@
             display: flex; /* Use flexbox for alignment */
             gap: 10px; /* Space between input and button */
             padding: 10px;
-            background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent background */
+            background-color: rgba(255, 255, 255, 0.9); /* Slightly transparent background */
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15); /* More prominent shadow */
+            backdrop-filter: blur(5px); /* Frosty glass effect */
+            -webkit-backdrop-filter: blur(5px); /* For Safari */
         }
         .email-container input[type="email"] {
-            padding: 8px;
+            padding: 10px;
             border: 1px solid #ccc;
-            border-radius: 4px;
+            border-radius: 5px;
             font-size: 16px;
+            width: 200px; /* Adjust width as needed */
+            box-sizing: border-box; /* Include padding in width */
         }
         .email-container button {
-            padding: 8px 15px;
+            padding: 10px 18px;
             background-color: #007bff;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
+            transition: background-color 0.2s ease;
         }
-        .email-container button:hover {
+        .email-container button:hover:not(:disabled) {
             background-color: #0056b3;
+        }
+        .email-container button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
     <div class="image-container active">
-        <img src="360_F_273162497_ShAAB1TH0vhM4UUWbhBuao8jtGBDubwD.jpg" alt="Image 1">
+        <img src="image1.jpg" alt="Image 1">
     </div>
     <div class="image-container">
-        <img src="istockphoto-1041987488-612x612.jpg" alt="Image 2">
+        <img src="image2.png" alt="Image 2">
     </div>
     <div class="image-container">
-        <img src="images.jpg" alt="Image 3">
+        <img src="image3.jpeg" alt="Image 3">
     </div>
     <div class="email-container">
         <input type="email" id="email" placeholder="Enter your email">
@@ -78,6 +91,14 @@
     <script>
         let currentImageIndex = 0;
         const imageContainers = document.querySelectorAll('.image-container');
+
+        // Added for better mobile experience
+        const body = document.body;
+        // Prevent default touch actions like pull-to-refresh or scrolling
+        body.addEventListener('touchmove', function(event) {
+            event.preventDefault();
+        }, { passive: false });
+
 
         function showImage(index) {
             imageContainers.forEach((container, i) => {
@@ -89,18 +110,24 @@
             });
         }
 
-        // Function to handle swiping (basic version)
+        // --- Swiping Logic ---
         let touchStartX = 0;
         let touchEndX = 0;
 
         document.addEventListener('touchstart', e => {
-            touchStartX = e.touches[0].clientX;
-        });
+            // Only consider single touch
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+            }
+        }, { passive: true }); // Use passive to avoid blocking scroll (though we prevent default later)
 
         document.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].clientX;
-            handleSwipe();
-        });
+            // Only consider single touch end
+            if (e.changedTouches.length === 1) {
+                touchEndX = e.changedTouches[0].clientX;
+                handleSwipe();
+            }
+        }, { passive: true });
 
         function handleSwipe() {
             const minSwipeDistance = 50; // Minimum pixels to count as a swipe
@@ -114,19 +141,60 @@
             }
             showImage(currentImageIndex);
         }
+        // --- END Swiping Logic ---
 
-        // Placeholder for sending email - We'll build this out later
-        function sendEmail() {
-            const email = document.getElementById('email').value;
-            if (email) {
-                alert(`Simulating sending file to: ${email}`);
-                // In a real application, you'd send this email to a server
-                // to handle the file attachment and sending.
-                document.getElementById('email').value = ''; // Clear the input
-            } else {
+        // --- UPDATED sendEmail() FUNCTION ---
+        async function sendEmail() {
+            const recipientEmail = document.getElementById('email').value.trim(); // .trim() removes whitespace
+
+            if (!recipientEmail) {
                 alert('Please enter your email address.');
+                return;
+            }
+
+            // More robust email format validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(recipientEmail)) {
+                alert('Please enter a valid email address (e.g., example@domain.com).');
+                return;
+            }
+
+            // Provide immediate feedback to the user
+            const sendButton = document.querySelector('.email-container button');
+            const originalButtonText = sendButton.textContent;
+            sendButton.textContent = 'Sending...';
+            sendButton.disabled = true;
+
+            try {
+                // Make a POST request to your Vercel serverless function
+                const response = await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ recipientEmail: recipientEmail }),
+                });
+
+                const data = await response.json(); // Parse the JSON response from your serverless function
+
+                if (response.ok) { // Check if the HTTP status code is 2xx
+                    alert('Success! Your file has been sent to ' + recipientEmail + '.');
+                    document.getElementById('email').value = ''; // Clear the input
+                } else {
+                    // Display error message from the serverless function
+                    alert('Failed to send email: ' + (data.message || 'Unknown error.'));
+                    console.error('Serverless function error:', data); // Log full error response for debugging
+                }
+            } catch (error) {
+                console.error('Network or unexpected error:', error);
+                alert('An error occurred. Please try again later.');
+            } finally {
+                // Reset button state
+                sendButton.textContent = originalButtonText;
+                sendButton.disabled = false;
             }
         }
+        // --- END UPDATED sendEmail() FUNCTION ---
 
         // Initialize with the first image
         showImage(currentImageIndex);
