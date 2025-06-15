@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const SENDER_EMAIL = 'noreply@myipadphotos.com'; // <--- IMPORTANT: YOU MUST REPLACE THIS!
     
     // This is YOUR Vercel address where the images are hosted
-    const IMAGE_LINK = 'https://ipad-image-display-c5cv0ir11-kadens-projects-60eab1e9.vercel.app'; // <--- THIS HAS BEEN UPDATED WITH YOUR URL
+    const IMAGE_LINK = 'ipad-image-display.vercel.app'; // <--- THIS HAS BEEN UPDATED WITH YOUR URL
 
     try {
         const data = await resend.emails.send({
