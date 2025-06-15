@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
     try {
         // Construct the full URL to the image
-        const imageUrl = `<span class="math-inline">\{BASE\_URL\}/</span>{imageFilename}`;
+        const imageUrl = `${BASE_URL}/${imageFilename}`;
 
         // Fetch the image data
         const imageResponse = await fetch(imageUrl);
