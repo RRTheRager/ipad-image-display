@@ -5,8 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://unpkg.com/whatwg-fetch@3.6.2/dist/fetch.umd.js"></script>
     <style>
-        /* Your existing CSS styles */
-    </style>
+    html {
+        width: 100%;
+        height: 100%;
+        overflow: hidden; /* Critical for preventing scroll/zoom on HTML element */
+    }
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%; /* Ensure body takes full width */
+        height: 100%; /* Ensure body takes full height */
+        min-height: 100vh; /* Keep for general compatibility but fixed height is primary */
+        margin: 0;
+        overflow: hidden;
+        background-color: #f0f0f0;
+        font-family: Arial, sans-serif;
+        cursor: pointer;
+    }
+    /* ... rest of your existing CSS ... */
+</style>
 </head>
 <body>
     </body>
