@@ -75,6 +75,15 @@
     </style>
 </head>
 <body>
+    <div class="image-container active">
+        <img src="images.jpg" alt="Image 1">
+    </div>
+    <div class="image-container">
+        <img src="cola-0247.jpg" alt="Image 2">
+    </div>
+    <div class="image-container">
+        <img src="none2852__700.jpg" alt="Image 3">
+    </div>
     <div class="email-container">
         <input type="email" id="email" placeholder="Enter your email">
         <button onclick="sendEmail()">Send File</button>
@@ -82,8 +91,7 @@
 
     <script>
         let currentImageIndex = 0;
-        let imageFilenames = []; // This will store the list of image filenames
-        let imageContainers = []; // This will store the dynamically created image container elements
+        const imageContainers = document.querySelectorAll('.image-container'); // Selects the hardcoded divs
 
         const body = document.body;
         body.addEventListener('touchmove', function(event) {
@@ -91,55 +99,10 @@
         }, { passive: false });
 
 
-        // --- New function to dynamically load images ---
-        async function loadImages() {
-            try {
-                const response = await fetch('/api/list-images');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const filenames = await response.json();
-                imageFilenames = filenames; // Store the filenames
-
-                const mainContentArea = document.body; // Or a specific div if you had one for images
-
-                // Clear existing image containers if any (important for re-loading)
-                document.querySelectorAll('.image-container').forEach(el => el.remove());
-                imageContainers = []; // Reset the array
-
-                // Create image containers for each filename
-                filenames.forEach((filename, index) => {
-                    const div = document.createElement('div');
-                    div.className = 'image-container';
-
-                    const img = document.createElement('img');
-                    img.src = `/public/images/${filename}`; // Path to your images on Vercel
-                    img.alt = `Image ${index + 1}`; // Simple alt text
-
-                    div.appendChild(img);
-                    mainContentArea.insertBefore(div, document.querySelector('.email-container')); // Insert before email container
-
-                    imageContainers.push(div); // Add to our array for swiping
-                });
-
-                // Initialize with the first image if there are any
-                if (imageContainers.length > 0) {
-                    showImage(currentImageIndex);
-                } else {
-                    console.warn("No images found to display.");
-                    alert("No images found to display. Please upload images to public/images folder.");
-                }
-
-            } catch (error) {
-                console.error('Error loading images:', error);
-                alert('Failed to load images. Please try again later.');
-            }
-        }
-        // --- End New function ---
-
-
         function showImage(index) {
             // Ensure index is within bounds
+            if (imageContainers.length === 0) return; // No images to show
+
             if (index < 0) index = imageContainers.length - 1;
             if (index >= imageContainers.length) index = 0;
 
@@ -153,7 +116,7 @@
             currentImageIndex = index; // Update current index
         }
 
-        // --- Swiping Logic (remains mostly the same, now operating on dynamic elements) ---
+        // --- Swiping Logic (remains mostly the same, operates on selected elements) ---
         let touchStartX = 0;
         let touchEndX = 0;
 
@@ -185,7 +148,7 @@
         }
         // --- END Swiping Logic ---
 
-        // --- sendEmail() Function (slightly updated to pass dynamic filename) ---
+        // --- sendEmail() Function (now gets src directly from active image) ---
         async function sendEmail() {
             const recipientEmail = document.getElementById('email').value.trim();
 
@@ -200,13 +163,17 @@
                 return;
             }
 
-            // Get the currently displayed image's filename from our loaded list
-            const currentImageFilename = imageFilenames[currentImageIndex];
+            // Get the currently displayed image's full src attribute
+            const currentImageElement = imageContainers[currentImageIndex].querySelector('img');
+            const currentImageSrc = currentImageElement ? currentImageElement.getAttribute('src') : null;
 
-            if (!currentImageFilename) {
-                alert('Could not determine current image to send. No images loaded or selected.');
+            if (!currentImageSrc) {
+                alert('Could not determine current image to send. No images found.');
                 return;
             }
+
+            // The imageFilename sent to backend will now be like "public/images/image1.jpg"
+            const imageFilename = currentImageSrc; 
 
             const sendButton = document.querySelector('.email-container button');
             const originalButtonText = sendButton.textContent;
@@ -221,7 +188,7 @@
                     },
                     body: JSON.stringify({
                         recipientEmail: recipientEmail,
-                        imageFilename: currentImageFilename // Pass the filename to the serverless function
+                        imageFilename: imageFilename // Pass the full path from src to the serverless function
                     }),
                 });
 
@@ -244,8 +211,8 @@
         }
         // --- END sendEmail() Function ---
 
-        // Load images when the page first loads
-        loadImages();
+        // Initialize with the first image after all setup
+        showImage(currentImageIndex);
     </script>
 </body>
 </html>

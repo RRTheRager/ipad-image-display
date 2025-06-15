@@ -5,7 +5,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
-    const { recipientEmail, imageFilename } = req.body; // Now receiving imageFilename
+    const { recipientEmail, imageFilename } = req.body; // imageFilename will now be like "public/images/image1.jpg"
 
     if (!recipientEmail || !recipientEmail.includes('@')) {
         return res.status(400).json({ message: 'Invalid recipient email address.' });
@@ -16,11 +16,12 @@ export default async function handler(req, res) {
 
     const resend = new Resend(process.env.RESEND_API_KEY);
 
-    const SENDER_EMAIL = 'noreply@myipadphotos.com'; // <--- IMPORTANT: REPLACE THIS with your actual verified email
+    // This is the original sender name and email format
+    const SENDER_EMAIL = 'noreply@myipadphotos.com'; // <--- IMPORTANT: YOU MUST REPLACE THIS!
     const BASE_URL = 'https://ipad-image-display.vercel.app'; // Your Vercel domain
 
     try {
-        // Construct the full URL to the image
+        // Construct the full URL to the image, which now correctly includes "public/images/"
         const imageUrl = `${BASE_URL}/${imageFilename}`;
 
         // Fetch the image data
@@ -38,11 +39,14 @@ export default async function handler(req, res) {
 
         // Determine content type (simple guess from filename for common types)
         let contentType = 'application/octet-stream';
-        if (imageFilename.endsWith('.jpg') || imageFilename.endsWith('.jpeg')) {
+        // Extract just the filename from the path (e.g., "image1.jpg" from "public/images/image1.jpg")
+        const justFilename = imageFilename.split('/').pop(); 
+        
+        if (justFilename.endsWith('.jpg') || justFilename.endsWith('.jpeg')) {
             contentType = 'image/jpeg';
-        } else if (imageFilename.endsWith('.png')) {
+        } else if (justFilename.endsWith('.png')) {
             contentType = 'image/png';
-        } else if (imageFilename.endsWith('.gif')) {
+        } else if (justFilename.endsWith('.gif')) {
             contentType = 'image/gif';
         }
 
@@ -50,14 +54,12 @@ export default async function handler(req, res) {
             from: `Your Display Gallery <${SENDER_EMAIL}>`,
             to: [recipientEmail],
             subject: 'Your Requested Image',
-            html: `<p>&nbsp;</p>`, // This is an HTML non-breaking space, which ensures the body isn't truly empty and gets rendered.
-                       // Alternatively, you could just use `html: ''` for a completely empty body,
-                       // but some email clients might ignore it or add default text.
+            html: `<p>&nbsp;</p>`, // Minimal body
             attachments: [
                 {
-                    filename: imageFilename, // The original filename
-                    content: imageBase64,    // The Base64 encoded image data
-                    contentType: contentType // The MIME type of the image
+                    filename: justFilename, // Use just the filename for the attachment name
+                    content: imageBase64,
+                    contentType: contentType
                 },
             ],
         });
