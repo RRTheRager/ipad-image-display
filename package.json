@@ -1,0 +1,12 @@
+{
+  "name": "ipad-display-app",
+  "version": "1.0.0",
+  "description": "iPad display app for image swiping and email sending",
+  "main": "api/send-email.js",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "resend": "^3.2.0"
+  }
+}
